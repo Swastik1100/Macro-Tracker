@@ -10,7 +10,7 @@
 
 const express = require('express');
 const router  = express.Router();
-const db      = require('../db');
+const db = require('./db');
 
 // Helper: return today's local date as "YYYY-MM-DD"
 function todayStr() {
