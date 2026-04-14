@@ -5,7 +5,7 @@
 const express    = require('express');
 const cors       = require('cors');
 const path       = require('path');
-const mealsRoute = require('./routes/meals');
+const mealsRoute = require('./meals');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
