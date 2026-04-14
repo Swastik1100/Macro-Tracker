@@ -1,0 +1,29 @@
+# render.yaml  –  Deploy to Render.com (free tier)
+# ─────────────────────────────────────────────────
+# 1. Push this repo to GitHub
+# 2. Go to https://dashboard.render.com → "New Web Service"
+# 3. Connect your GitHub repo
+# 4. Render auto-detects this file and fills everything in
+# 5. Click Deploy!
+#
+# Your live URL will be: https://nomnomacros.onrender.com
+#
+# IMPORTANT: Render free tier spins down after 15 min of inactivity.
+# First load after sleep takes ~30 seconds. This is normal on free tier.
+# ─────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: nomnomacros
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    disk:
+      name: macros-db
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
