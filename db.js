@@ -9,7 +9,7 @@ const path     = require('path');
 const fs       = require('fs');
 
 // Make sure the data/ folder exists
-const dataDir = path.join(__dirname, '..', 'data');
+const dataDir = path.join(__dirname, 'data'); // Remove the '..'
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new Database(path.join(dataDir, 'macros.db'));
