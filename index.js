@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 // Serve the frontend from /public
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname)));
 
 // ── API Routes ───────────────────────────────
 app.use('/api', mealsRoute);
