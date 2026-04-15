@@ -929,6 +929,183 @@ function showToast(msg, isError = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.className = 'toast', 2400);
 }
+  // ════════════════════════════════════════════════════════
+//  AUTHENTICATION & USER MANAGEMENT
+// ════════════════════════════════════════════════════════
+let currentUser = null;
+const SECRET = 'your-secret-key'; // Match backend secret
+
+// Check if user is logged in on page load
+function checkAuthToken() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      currentUser = payload;
+      updateAuthUI();
+    } catch (e) {
+      localStorage.removeItem('token');
+    }
+  }
+}
+
+function updateAuthUI() {
+  const authBtn = document.getElementById('authBtn');
+  const adminTab = document.querySelector('[data-tab="admin"]');
+  
+  if (currentUser?.role === 'admin') {
+    adminTab.style.display = 'inline-block';
+  } else {
+    adminTab.style.display = 'none';
+  }
+  
+  authBtn.textContent = currentUser ? `👤 ${currentUser.username}` : '👤 Login';
+}
+
+// Open Auth Modal
+document.getElementById('authBtn').addEventListener('click', () => {
+  document.getElementById('authModal').classList.add('active');
+  document.getElementById('authUsername').focus();
+});
+
+// Close Auth Modal
+document.getElementById('closeAuth').addEventListener('click', () => {
+  document.getElementById('authModal').classList.remove('active');
+});
+
+// Login Handler
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  
+  if (!username || !password) {
+    showToast('Username and password required', true);
+    return;
+  }
+  
+  try {
+    const res = await apiFetch('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+    
+    localStorage.setItem('token', res.token);
+    currentUser = res.user;
+    updateAuthUI();
+    document.getElementById('authModal').classList.remove('active');
+    document.getElementById('authUsername').value = '';
+    document.getElementById('authPassword').value = '';
+    showToast(`Welcome back, ${currentUser.username}! 👋`);
+    loadAdminUsers(); // Refresh admin panel if needed
+  } catch (e) {
+    showToast('Login failed. Check credentials.', true);
+  }
+});
+
+// Register Handler
+document.getElementById('registerBtn').addEventListener('click', async () => {
+  const username = document.getElementById('authUsername').value.trim();
+  const password = document.getElementById('authPassword').value.trim();
+  
+  if (!username || !password) {
+    showToast('Username and password required', true);
+    return;
+  }
+  
+  if (password.length < 6) {
+    showToast('Password must be at least 6 characters', true);
+    return;
+  }
+  
+  try {
+    const res = await apiFetch('/api/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, email: `${username}@macrotracker.local` })
+    });
+    
+    showToast('✅ Account created! Now login with your credentials.');
+    document.getElementById('authUsername').value = '';
+    document.getElementById('authPassword').value = '';
+  } catch (e) {
+    showToast('Registration failed. Username may already exist.', true);
+  }
+});
+
+// Load Admin Users
+async function loadAdminUsers() {
+  if (currentUser?.role !== 'admin') return;
+  
+  const usersList = document.getElementById('usersList');
+  const token = localStorage.getItem('token');
+  
+  try {
+    const res = await fetch('/api/users', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load users');
+    
+    const data = await res.json();
+    usersList.innerHTML = '';
+    
+    if (data.users.length === 0) {
+      usersList.innerHTML = '<div class="empty-state"><p>No users found</p></div>';
+      return;
+    }
+    
+    data.users.forEach(user => {
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.style.cssText = 'background: var(--card); padding: 16px; border-radius: var(--radius-lg); margin-bottom: 10px; box-shadow: var(--shadow-soft);';
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>${user.username}</strong>
+            <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 4px;">Role: <span style="background: ${user.role === 'admin' ? '#ffe0ec' : '#d8eeff'}; padding: 2px 8px; border-radius: 4px;">${user.role}</span></p>
+          </div>
+          <button class="delete-user-btn" data-id="${user.id}" style="background: #ff6b6b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Remove</button>
+        </div>
+      `;
+      usersList.appendChild(card);
+    });
+    
+    // Delete user handlers
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.id;
+        if (confirm('Are you sure you want to deactivate this user?')) {
+          try {
+            await fetch(`/api/users/${userId}/deactivate`, {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            showToast('User deactivated');
+            loadAdminUsers();
+          } catch (e) {
+            showToast('Failed to deactivate user', true);
+          }
+        }
+      });
+    });
+  } catch (e) {
+    usersList.innerHTML = '<div class="empty-state"><p>⚠️ Could not load users</p></div>';
+  }
+}
+
+// Logout Handler
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('token');
+  currentUser = null;
+  updateAuthUI();
+  switchTab('today');
+  showToast('Logged out 👋');
+});
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+checkAuthToken();
+loadDay(viewDate);
 
 // ════════════════════════════════════════════════════════
 //  INIT
