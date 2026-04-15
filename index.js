@@ -10,6 +10,11 @@ const mealsRoute = require('./meals');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+//change1
+const userRoute = require('./users');
+// ... existing code
+app.use('/api', userRoute);
+
 // ── Middleware ───────────────────────────────
 app.use(cors());
 app.use(express.json());
