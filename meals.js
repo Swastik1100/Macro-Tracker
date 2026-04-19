@@ -81,6 +81,49 @@ router.post('/meals', (req, res) => {
   res.status(201).json({ meal });
 });
 
+// ── GET /api/food-search ────────────────────
+// Proxy to Open Food Facts (no API key required).
+// Returns up to 15 products with per-100 g macro data.
+router.get('/food-search', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) return res.json({ items: [] });
+
+  try {
+    const apiUrl =
+      'https://world.openfoodfacts.org/cgi/search.pl?' +
+      `search_terms=${encodeURIComponent(q)}` +
+      '&search_simple=1&action=process&json=1&page_size=20' +
+      '&fields=product_name,nutriments,serving_size,serving_quantity';
+
+    const apiRes  = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
+    const apiData = await apiRes.json();
+
+    const items = (apiData.products || [])
+      .filter(p => {
+        const n = p.nutriments || {};
+        return p.product_name && typeof n['energy-kcal_100g'] === 'number';
+      })
+      .slice(0, 15)
+      .map(p => {
+        const n = p.nutriments;
+        return {
+          name:           p.product_name.trim(),
+          kcalPer100g:    Math.round(n['energy-kcal_100g']   || 0),
+          proteinPer100g: +((n['proteins_100g']      || 0).toFixed(1)),
+          carbsPer100g:   +((n['carbohydrates_100g'] || 0).toFixed(1)),
+          fatsPer100g:    +((n['fat_100g']            || 0).toFixed(1)),
+          servingSize:    p.serving_size                      || null,
+          servingQty:     p.serving_quantity ? Math.round(p.serving_quantity) : null,
+        };
+      });
+
+    res.json({ items });
+  } catch (e) {
+    console.error('[food-search]', e.message);
+    res.status(502).json({ error: 'Food database temporarily unavailable.' });
+  }
+});
+
 // ── DELETE /api/meals/:id ───────────────────
 router.delete('/meals/:id', (req, res) => {
   const id = parseInt(req.params.id);

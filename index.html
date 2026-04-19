@@ -356,6 +356,80 @@
     .menu-kcal .kcal-num { font-family: 'Nunito', sans-serif; font-size: 1.1rem; font-weight: 900; color: var(--mint-deep); }
     .menu-kcal .kcal-unit { font-size: 0.65rem; color: var(--text-light); font-weight: 600; }
 
+    /* ── Quantity Picker View ── */
+    .qty-view {
+      display: flex; flex-direction: column;
+      flex: 1; overflow-y: auto;
+      padding: 16px 24px 32px;
+    }
+    .qty-back-btn {
+      background: #f0f0f5; border: none; border-radius: var(--radius-pill);
+      padding: 8px 16px; font-family: 'Nunito', sans-serif;
+      font-size: 0.82rem; font-weight: 800;
+      color: var(--text-mid); cursor: pointer; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .qty-back-btn:hover { background: #e4e4ef; }
+    .qty-food-card {
+      background: var(--card); border-radius: var(--radius-lg);
+      padding: 14px 16px; display: flex; align-items: flex-start;
+      gap: 12px; box-shadow: var(--shadow-soft); margin-bottom: 20px;
+    }
+    .qty-stepper {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; background: #f0f0f8; border-radius: var(--radius-pill);
+      padding: 6px 16px; margin-bottom: 20px;
+    }
+    .qty-step-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--card); border: none; cursor: pointer;
+      font-size: 1.4rem; font-weight: 700; color: var(--mint-deep);
+      box-shadow: var(--shadow-soft); transition: transform 0.15s;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+    }
+    .qty-step-btn:hover  { transform: scale(1.09); }
+    .qty-step-btn:active { transform: scale(0.93); }
+    .qty-input {
+      width: 90px; text-align: center; border: none; background: transparent;
+      font-family: 'Nunito', sans-serif; font-size: 1.5rem; font-weight: 900;
+      color: var(--text-dark); outline: none;
+    }
+    .qty-input::-webkit-outer-spin-button,
+    .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .qty-input[type=number] { -moz-appearance: textfield; }
+    .qty-unit-label { font-size: 0.85rem; font-weight: 700; color: var(--text-mid); }
+    .qty-macros-grid {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-bottom: 24px;
+    }
+    .qty-macro-cell {
+      background: var(--card); border-radius: var(--radius-lg);
+      padding: 14px 16px; box-shadow: var(--shadow-soft);
+    }
+    .qty-macro-cell .qm-label { font-size: 0.72rem; color: var(--text-light); font-weight: 600; margin-bottom: 4px; }
+    .qty-macro-cell .qm-val {
+      font-family: 'Nunito', sans-serif; font-size: 1.35rem; font-weight: 900; color: var(--text-dark);
+    }
+    .qty-macro-cell .qm-unit { font-size: 0.7rem; color: var(--text-light); font-weight: 600; }
+    .qty-macro-cell.kcal .qm-val { color: var(--mint-deep); }
+    .qty-add-btn {
+      background: linear-gradient(135deg, var(--mint-deep), var(--sky-deep));
+      color: #fff; border: none; border-radius: var(--radius-pill);
+      padding: 16px; font-family: 'Nunito', sans-serif; font-weight: 800;
+      font-size: 1rem; cursor: pointer; width: 100%;
+      box-shadow: 0 6px 20px rgba(63,186,130,0.35);
+      transition: transform 0.18s, box-shadow 0.18s; margin-top: auto;
+    }
+    .qty-add-btn:hover  { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(63,186,130,0.45); }
+    .qty-add-btn:active { transform: translateY(0); }
+
+    /* ── Search loading ── */
+    .search-loading {
+      text-align: center; padding: 30px 20px;
+      color: var(--text-light); font-size: 0.88rem; line-height: 1.9;
+    }
+    .search-loading .spin { display: inline-block; animation: rotatespin 0.9s linear infinite; font-size: 1.6rem; }
+    @keyframes rotatespin { to { transform: rotate(360deg); } }
+
     /* ── History Page ── */
     .history-card {
       background: var(--card); border-radius: var(--radius-lg);
@@ -547,14 +621,69 @@
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h2>🍴 Pick a Meal</h2>
-      <button class="modal-close" id="closeModal">✕</button>
+
+    <!-- ── View 1: Food Search ── -->
+    <div id="view-search" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+      <div class="modal-header">
+        <h2>🍴 Add Food</h2>
+        <button class="modal-close" id="closeModal">✕</button>
+      </div>
+      <div class="modal-search-wrap">
+        <input class="modal-search" id="searchInput" type="text"
+               placeholder="🔍  Search foods (e.g. roti, dal, paneer)…"/>
+      </div>
+      <div class="modal-list" id="menuListEl"></div>
     </div>
-    <div class="modal-search-wrap">
-      <input class="modal-search" id="searchInput" type="text" placeholder="🔍  Search meals…"/>
+
+    <!-- ── View 2: Quantity Picker ── -->
+    <div id="view-qty" class="qty-view" style="display:none;">
+      <!-- header row -->
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+        <button id="qtyBackBtn" class="qty-back-btn">← Back</button>
+      </div>
+      <!-- food preview -->
+      <div class="qty-food-card">
+        <div id="qtyEmoji" style="font-size:2.2rem; flex-shrink:0; line-height:1;"></div>
+        <div style="flex:1; min-width:0;">
+          <div id="qtyFoodName" style="font-weight:800; font-size:0.92rem; color:var(--text-dark); word-break:break-word;"></div>
+          <div id="qtyFoodSub" style="font-size:0.75rem; color:var(--text-mid); margin-top:3px;"></div>
+        </div>
+      </div>
+      <!-- quantity controls -->
+      <div class="section-label" style="margin-bottom:12px;">Quantity</div>
+      <div class="qty-stepper">
+        <button id="qtyMinus" class="qty-step-btn">−</button>
+        <input type="number" id="qtyInput" class="qty-input" value="1" min="0.5" step="0.5"/>
+        <span id="qtyUnitLabel" class="qty-unit-label">serving</span>
+        <button id="qtyPlus" class="qty-step-btn">+</button>
+      </div>
+      <!-- live macro preview -->
+      <div class="section-label" style="margin-bottom:12px;">Nutritional Values</div>
+      <div class="qty-macros-grid">
+        <div class="qty-macro-cell kcal">
+          <div class="qm-label">Calories</div>
+          <div class="qm-val" id="qmKcal">0</div>
+          <div class="qm-unit">kcal</div>
+        </div>
+        <div class="qty-macro-cell">
+          <div class="qm-label">Protein</div>
+          <div class="qm-val" id="qmProtein">0</div>
+          <div class="qm-unit">g</div>
+        </div>
+        <div class="qty-macro-cell">
+          <div class="qm-label">Carbohydrates</div>
+          <div class="qm-val" id="qmCarbs">0</div>
+          <div class="qm-unit">g</div>
+        </div>
+        <div class="qty-macro-cell">
+          <div class="qm-label">Fats</div>
+          <div class="qm-val" id="qmFats">0</div>
+          <div class="qm-unit">g</div>
+        </div>
+      </div>
+      <!-- confirm -->
+      <button id="qtyAddBtn" class="qty-add-btn">✓ Add to Log</button>
     </div>
-    <div class="modal-list" id="menuListEl"></div>
   </div>
 </div>
 
@@ -581,29 +710,29 @@
 // ════════════════════════════════════════════════════════
 const menuList = [
   // BREAKFAST
-  { name:"Aloo Pyaz Parantha, Dahi & Tea",    emoji:"🫓", category:"Breakfast", kcal:420, protein:12, carbs:55,  fats:16 },
-  { name:"Uttapam & Chutneys",                emoji:"🥞", category:"Breakfast", kcal:350, protein:8,  carbs:55,  fats:12 },
-  { name:"Chole Bhature & Tea",               emoji:"🍛", category:"Breakfast", kcal:750, protein:18, carbs:85,  fats:35 },
-  { name:"Dosa, Sambhar & Chutneys",          emoji:"🫔", category:"Breakfast", kcal:380, protein:12, carbs:60,  fats:10 },
-  { name:"Amritsari Naan, Chole & Butter",    emoji:"🫓", category:"Breakfast", kcal:650, protein:16, carbs:80,  fats:28 },
-  { name:"Banana, Milk & Cornflakes",         emoji:"🥛", category:"Breakfast", kcal:450, protein:14, carbs:85,  fats:6  },
+  { name:"Aloo Pyaz Parantha, Dahi & Tea",    emoji:"🫓", category:"Breakfast", type:"fixed", kcal:420, protein:12, carbs:55,  fats:16 },
+  { name:"Uttapam & Chutneys",                emoji:"🥞", category:"Breakfast", type:"fixed", kcal:350, protein:8,  carbs:55,  fats:12 },
+  { name:"Chole Bhature & Tea",               emoji:"🍛", category:"Breakfast", type:"fixed", kcal:750, protein:18, carbs:85,  fats:35 },
+  { name:"Dosa, Sambhar & Chutneys",          emoji:"🫔", category:"Breakfast", type:"fixed", kcal:380, protein:12, carbs:60,  fats:10 },
+  { name:"Amritsari Naan, Chole & Butter",    emoji:"🫓", category:"Breakfast", type:"fixed", kcal:650, protein:16, carbs:80,  fats:28 },
+  { name:"Banana, Milk & Cornflakes",         emoji:"🥛", category:"Breakfast", type:"fixed", kcal:450, protein:14, carbs:85,  fats:6  },
   // LUNCH
-  { name:"Kala Chana, Jeera Rice, Dal & Roti", emoji:"🍛", category:"Lunch", kcal:650, protein:24, carbs:100, fats:12 },
-  { name:"Rajma, Aloo Methi, Rice & Roti",    emoji:"🍲", category:"Lunch", kcal:680, protein:22, carbs:105, fats:14 },
-  { name:"Chole, Puri & Dahi",                emoji:"🥟", category:"Lunch", kcal:700, protein:18, carbs:90,  fats:30 },
-  { name:"Pav Bhaji & Tea",                   emoji:"🍞", category:"Lunch", kcal:550, protein:14, carbs:70,  fats:24 },
-  { name:"Chinese Fried Rice & Dal",          emoji:"🍚", category:"Lunch", kcal:500, protein:12, carbs:75,  fats:16 },
+  { name:"Kala Chana, Jeera Rice, Dal & Roti", emoji:"🍛", category:"Lunch", type:"fixed", kcal:650, protein:24, carbs:100, fats:12 },
+  { name:"Rajma, Aloo Methi, Rice & Roti",    emoji:"🍲", category:"Lunch", type:"fixed", kcal:680, protein:22, carbs:105, fats:14 },
+  { name:"Chole, Puri & Dahi",                emoji:"🥟", category:"Lunch", type:"fixed", kcal:700, protein:18, carbs:90,  fats:30 },
+  { name:"Pav Bhaji & Tea",                   emoji:"🍞", category:"Lunch", type:"fixed", kcal:550, protein:14, carbs:70,  fats:24 },
+  { name:"Chinese Fried Rice & Dal",          emoji:"🍚", category:"Lunch", type:"fixed", kcal:500, protein:12, carbs:75,  fats:16 },
   // DINNER
-  { name:"Mix Veg, Dal Makhani, Rice, Roti & Rasmalai",      emoji:"🥘", category:"Dinner", kcal:750, protein:20, carbs:110, fats:22 },
-  { name:"Paneer Do Pyaza, Rice, Roti & Gulab Jamun",        emoji:"🧀", category:"Dinner", kcal:850, protein:26, carbs:95,  fats:38 },
-  { name:"Paneer Bhurji, Dal, Rice, Roti & Rabdi Jalebi",    emoji:"🍛", category:"Dinner", kcal:800, protein:28, carbs:100, fats:30 },
-  { name:"Aloo Gobhi, Dal, Rice, Roti & Kheer",              emoji:"🍲", category:"Dinner", kcal:650, protein:18, carbs:105, fats:15 },
+  { name:"Mix Veg, Dal Makhani, Rice, Roti & Rasmalai",      emoji:"🥘", category:"Dinner", type:"fixed", kcal:750, protein:20, carbs:110, fats:22 },
+  { name:"Paneer Do Pyaza, Rice, Roti & Gulab Jamun",        emoji:"🧀", category:"Dinner", type:"fixed", kcal:850, protein:26, carbs:95,  fats:38 },
+  { name:"Paneer Bhurji, Dal, Rice, Roti & Rabdi Jalebi",    emoji:"🍛", category:"Dinner", type:"fixed", kcal:800, protein:28, carbs:100, fats:30 },
+  { name:"Aloo Gobhi, Dal, Rice, Roti & Kheer",              emoji:"🍲", category:"Dinner", type:"fixed", kcal:650, protein:18, carbs:105, fats:15 },
   // SNACKS
-  { name:"Peri Peri Fries & Tea",             emoji:"🍟", category:"Snacks", kcal:350, protein:4,  carbs:45, fats:18 },
-  { name:"Samosa & Green Chutney, Tea",        emoji:"🥟", category:"Snacks", kcal:380, protein:6,  carbs:45, fats:20 },
-  { name:"Paneer Pakora & Tea",               emoji:"🧆", category:"Snacks", kcal:400, protein:12, carbs:35, fats:24 },
-  { name:"Burger & Tea",                      emoji:"🍔", category:"Snacks", kcal:350, protein:8,  carbs:45, fats:15 },
-  { name:"Masala Sweet Corn & Tea",           emoji:"🌽", category:"Snacks", kcal:250, protein:6,  carbs:35, fats:8  },
+  { name:"Peri Peri Fries & Tea",             emoji:"🍟", category:"Snacks", type:"fixed", kcal:350, protein:4,  carbs:45, fats:18 },
+  { name:"Samosa & Green Chutney, Tea",        emoji:"🥟", category:"Snacks", type:"fixed", kcal:380, protein:6,  carbs:45, fats:20 },
+  { name:"Paneer Pakora & Tea",               emoji:"🧆", category:"Snacks", type:"fixed", kcal:400, protein:12, carbs:35, fats:24 },
+  { name:"Burger & Tea",                      emoji:"🍔", category:"Snacks", type:"fixed", kcal:350, protein:8,  carbs:45, fats:15 },
+  { name:"Masala Sweet Corn & Tea",           emoji:"🌽", category:"Snacks", type:"fixed", kcal:250, protein:6,  carbs:35, fats:8  },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -616,6 +745,10 @@ const GOALS = { kcal:3500, protein:120, carbs:500, fats:65 };
 // ════════════════════════════════════════════════════════
 // viewDate: which date is shown (YYYY-MM-DD string)
 let viewDate = todayDateStr();
+// selectedFood: the food chosen in the modal, waiting for qty confirmation
+let selectedFood = null;
+// searchDebounce: timer id for debounced API search
+let searchDebounce = null;
 
 function todayDateStr() {
   return new Date().toLocaleDateString('en-CA');
@@ -638,6 +771,22 @@ const menuListEl = document.getElementById('menuListEl');
 const mealsLog   = document.getElementById('mealsLog');
 const toast      = document.getElementById('toast');
 const fab        = document.getElementById('openModal');
+
+// Two modal views
+const viewSearch = document.getElementById('view-search');
+const viewQty    = document.getElementById('view-qty');
+
+// Quantity picker elements
+const qtyBackBtn   = document.getElementById('qtyBackBtn');
+const qtyMinusBtn  = document.getElementById('qtyMinus');
+const qtyPlusBtn   = document.getElementById('qtyPlus');
+const qtyInputEl   = document.getElementById('qtyInput');
+const qtyUnitLabel = document.getElementById('qtyUnitLabel');
+const qtyAddBtn    = document.getElementById('qtyAddBtn');
+const qmKcal       = document.getElementById('qmKcal');
+const qmProtein    = document.getElementById('qmProtein');
+const qmCarbs      = document.getElementById('qmCarbs');
+const qmFats       = document.getElementById('qmFats');
 
 const refs = {
   calVal:       document.getElementById('calVal'),
@@ -835,55 +984,267 @@ async function loadHistory() {
 }
 
 // ════════════════════════════════════════════════════════
-//  MODAL
+//  QUANTITY PICKER HELPERS
 // ════════════════════════════════════════════════════════
-function renderMenu(filter = '') {
-  menuListEl.innerHTML = '';
-  const query = filter.toLowerCase();
+
+/** Scale macros by qty.
+ *  type='fixed'   → qty is a servings multiplier (1 = one serving)
+ *  type='per100g' → qty is weight in grams; macros are stored per 100 g
+ */
+function calcScaledMacros(food, qty) {
+  if (food.type === 'per100g') {
+    const f = qty / 100;
+    return {
+      kcal:    Math.round(food.kcalPer100g    * f),
+      protein: Math.round(food.proteinPer100g * f * 10) / 10,
+      carbs:   Math.round(food.carbsPer100g   * f * 10) / 10,
+      fats:    Math.round(food.fatsPer100g    * f * 10) / 10,
+    };
+  }
+  // 'fixed': per serving
+  return {
+    kcal:    Math.round(food.kcal    * qty),
+    protein: Math.round(food.protein * qty * 10) / 10,
+    carbs:   Math.round(food.carbs   * qty * 10) / 10,
+    fats:    Math.round(food.fats    * qty * 10) / 10,
+  };
+}
+
+function updateQtyMacros() {
+  if (!selectedFood) return;
+  const qty = parseFloat(qtyInputEl.value) || (selectedFood.type === 'per100g' ? 100 : 1);
+  const m = calcScaledMacros(selectedFood, qty);
+  qmKcal.textContent    = m.kcal;
+  qmProtein.textContent = m.protein;
+  qmCarbs.textContent   = m.carbs;
+  qmFats.textContent    = m.fats;
+}
+
+function showSearchView() {
+  selectedFood = null;
+  viewQty.style.display    = 'none';
+  viewSearch.style.display = 'flex';
+}
+
+function showQtyPicker(food) {
+  selectedFood = food;
+
+  document.getElementById('qtyEmoji').textContent    = food.emoji || '🍽️';
+  document.getElementById('qtyFoodName').textContent = food.name;
+
+  if (food.type === 'per100g') {
+    const defaultGrams = food.servingQty || 100;
+    qtyInputEl.value    = defaultGrams;
+    qtyInputEl.min      = '5';
+    qtyInputEl.step     = '5';
+    qtyUnitLabel.textContent = 'g';
+    document.getElementById('qtyFoodSub').textContent =
+      food.servingSize ? `Typical serving: ${food.servingSize}` : 'Macros shown per 100 g';
+  } else {
+    // 'fixed' — serving-based local item
+    qtyInputEl.value    = '1';
+    qtyInputEl.min      = '0.5';
+    qtyInputEl.step     = '0.5';
+    qtyUnitLabel.textContent = 'serving';
+    document.getElementById('qtyFoodSub').textContent =
+      food.category ? food.category : 'Quick-add item';
+  }
+
+  updateQtyMacros();
+
+  viewSearch.style.display = 'none';
+  viewQty.style.display    = 'flex';
+}
+
+// ── Qty stepper events ───────────────────────
+qtyMinusBtn.addEventListener('click', () => {
+  const isGrams = selectedFood?.type === 'per100g';
+  const step = isGrams ? 10 : 0.5;
+  const min  = isGrams ? 5  : 0.5;
+  const val  = Math.max(min, parseFloat(qtyInputEl.value) - step);
+  qtyInputEl.value = isGrams ? Math.round(val) : Math.round(val * 10) / 10;
+  updateQtyMacros();
+});
+
+qtyPlusBtn.addEventListener('click', () => {
+  const isGrams = selectedFood?.type === 'per100g';
+  const step = isGrams ? 10 : 0.5;
+  const max  = isGrams ? 2000 : 10;
+  const val  = Math.min(max, parseFloat(qtyInputEl.value) + step);
+  qtyInputEl.value = isGrams ? Math.round(val) : Math.round(val * 10) / 10;
+  updateQtyMacros();
+});
+
+qtyInputEl.addEventListener('input', updateQtyMacros);
+
+qtyBackBtn.addEventListener('click', showSearchView);
+
+qtyAddBtn.addEventListener('click', async () => {
+  if (!selectedFood) return;
+  const qty = parseFloat(qtyInputEl.value);
+  if (!qty || qty <= 0) { showToast('Please enter a valid quantity', true); return; }
+
+  const macros  = calcScaledMacros(selectedFood, qty);
+  const isGrams = selectedFood.type === 'per100g';
+  const qtyStr  = isGrams
+    ? `${qty}g`
+    : qty === 1 ? '1 serving' : `${qty} servings`;
+
+  await addMeal({
+    name:     `${selectedFood.name} (${qtyStr})`,
+    emoji:    selectedFood.emoji || '🍽️',
+    category: selectedFood.category || 'Other',
+    ...macros,
+  });
+});
+
+// ════════════════════════════════════════════════════════
+//  MODAL – SEARCH VIEW
+// ════════════════════════════════════════════════════════
+
+/** Build one menu-item card and attach a click → showQtyPicker handler */
+function makeMenuItem(food) {
+  const isApiFood = food.type === 'per100g';
+  const displayKcal    = isApiFood ? food.kcalPer100g    : food.kcal;
+  const displayProtein = isApiFood ? food.proteinPer100g : food.protein;
+  const displayCarbs   = isApiFood ? food.carbsPer100g   : food.carbs;
+  const displayFats    = isApiFood ? food.fatsPer100g    : food.fats;
+  const perLabel       = isApiFood ? '/100g' : '/serving';
+
+  const el = document.createElement('div');
+  el.className = 'menu-item';
+  el.innerHTML = `
+    <div class="menu-emoji">${food.emoji || '🍽️'}</div>
+    <div class="menu-info">
+      <div class="menu-name">${food.name}</div>
+      <div class="menu-macros-row">
+        <span class="macro-tag p">P ${displayProtein}g</span>
+        <span class="macro-tag c">C ${displayCarbs}g</span>
+        <span class="macro-tag f">F ${displayFats}g</span>
+        <span style="font-size:0.65rem;color:var(--text-light);align-self:center;">${perLabel}</span>
+      </div>
+    </div>
+    <div class="menu-kcal">
+      <div class="kcal-num">${displayKcal}</div>
+      <div class="kcal-unit">kcal${isApiFood ? '/100g' : ''}</div>
+    </div>
+  `;
+  el.addEventListener('click', () => showQtyPicker(food));
+  return el;
+}
+
+/** Append Quick-Add section from the hardcoded menuList */
+function appendLocalItems(query) {
+  const q = query.toLowerCase();
+  const filtered = q
+    ? menuList.filter(m => m.name.toLowerCase().includes(q) || m.category.toLowerCase().includes(q))
+    : menuList;
+
+  if (filtered.length === 0) return;
+
+  const header = document.createElement('div');
+  header.className   = 'modal-category';
+  header.textContent = '⚡ Quick Add';
+  menuListEl.appendChild(header);
+
   const categories = {};
-  menuList.forEach(item => {
-    if (!item.name.toLowerCase().includes(query) && !item.category.toLowerCase().includes(query)) return;
-    if (!categories[item.category]) categories[item.category] = [];
-    categories[item.category].push(item);
+  filtered.forEach(m => {
+    if (!categories[m.category]) categories[m.category] = [];
+    categories[m.category].push(m);
   });
 
-  const keys = Object.keys(categories);
-  if (keys.length === 0) {
-    menuListEl.innerHTML = `<div class="empty-state"><div class="empty-emoji">🔍</div><p>No meals found for "<strong>${filter}</strong>"</p></div>`;
-    return;
-  }
-  keys.forEach(cat => {
-    const catLabel = document.createElement('div');
-    catLabel.className   = 'modal-category';
-    catLabel.textContent = cat;
-    menuListEl.appendChild(catLabel);
-
-    categories[cat].forEach(meal => {
-      const el = document.createElement('div');
-      el.className = 'menu-item';
-      el.innerHTML = `
-        <div class="menu-emoji">${meal.emoji}</div>
-        <div class="menu-info">
-          <div class="menu-name">${meal.name}</div>
-          <div class="menu-macros-row">
-            <span class="macro-tag p">P ${meal.protein}g</span>
-            <span class="macro-tag c">C ${meal.carbs}g</span>
-            <span class="macro-tag f">F ${meal.fats}g</span>
-          </div>
-        </div>
-        <div class="menu-kcal">
-          <div class="kcal-num">${meal.kcal}</div>
-          <div class="kcal-unit">kcal</div>
-        </div>
-      `;
-      el.addEventListener('click', () => addMeal(meal));
-      menuListEl.appendChild(el);
-    });
+  Object.keys(categories).forEach(cat => {
+    if (Object.keys(categories).length > 1) {
+      const catEl = document.createElement('div');
+      catEl.className = 'modal-category';
+      catEl.style.cssText = 'padding-left:12px; font-size:0.65rem;';
+      catEl.textContent = cat;
+      menuListEl.appendChild(catEl);
+    }
+    categories[cat].forEach(meal => menuListEl.appendChild(makeMenuItem(meal)));
   });
 }
 
-function openModal()  { overlay.classList.add('active'); searchEl.value = ''; renderMenu(); setTimeout(() => searchEl.focus(), 350); }
-function closeModal() { overlay.classList.remove('active'); }
+function renderMenu(filter = '') {
+  menuListEl.innerHTML = '';
+  const query = filter.trim();
+
+  // No search text → show only quick-add
+  if (!query) {
+    appendLocalItems('');
+    return;
+  }
+
+  // Too short to call API → filter locally only
+  if (query.length < 2) {
+    appendLocalItems(query);
+    return;
+  }
+
+  // Show loading state while the debounced API call fires
+  menuListEl.innerHTML = `
+    <div class="search-loading">
+      <span class="spin">🔄</span><br>
+      Searching food database…
+    </div>`;
+
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(async () => {
+    menuListEl.innerHTML = '';
+
+    try {
+      const data = await apiFetch(`/api/food-search?q=${encodeURIComponent(query)}`);
+
+      if (data.items && data.items.length > 0) {
+        const header = document.createElement('div');
+        header.className   = 'modal-category';
+        header.textContent = '🔍 Search Results';
+        menuListEl.appendChild(header);
+
+        data.items.forEach(item => {
+          menuListEl.appendChild(makeMenuItem({
+            name:           item.name,
+            emoji:          '🍽️',
+            category:       'Search Result',
+            type:           'per100g',
+            kcalPer100g:    item.kcalPer100g,
+            proteinPer100g: item.proteinPer100g,
+            carbsPer100g:   item.carbsPer100g,
+            fatsPer100g:    item.fatsPer100g,
+            servingQty:     item.servingQty,
+            servingSize:    item.servingSize,
+          }));
+        });
+      }
+
+      // Also show matching quick-add items below
+      appendLocalItems(query);
+
+      if (menuListEl.children.length === 0) {
+        menuListEl.innerHTML = `<div class="empty-state"><div class="empty-emoji">🔍</div><p>No results for "<strong>${query}</strong>"</p></div>`;
+      }
+    } catch {
+      // API unavailable — fall back to local only
+      appendLocalItems(query);
+      if (menuListEl.children.length === 0) {
+        menuListEl.innerHTML = `<div class="empty-state"><div class="empty-emoji">🔍</div><p>No results for "<strong>${query}</strong>"</p></div>`;
+      }
+    }
+  }, 500);
+}
+
+function openModal()  {
+  overlay.classList.add('active');
+  showSearchView();
+  searchEl.value = '';
+  renderMenu('');
+  setTimeout(() => searchEl.focus(), 350);
+}
+function closeModal() {
+  overlay.classList.remove('active');
+  // Reset to search view after slide-down animation completes
+  setTimeout(showSearchView, 420);
+}
 
 openBtn.addEventListener('click', openModal);
 closeBtn.addEventListener('click', closeModal);
@@ -1105,11 +1466,6 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 //  INIT
 // ════════════════════════════════════════════════════════
 checkAuthToken();
-loadDay(viewDate);
-
-// ════════════════════════════════════════════════════════
-//  INIT
-// ════════════════════════════════════════════════════════
 loadDay(viewDate);
 </script>
 </body>
