@@ -95,7 +95,7 @@ router.get('/food-search', async (req, res) => {
       '&search_simple=1&action=process&json=1&page_size=20' +
       '&fields=product_name,nutriments,serving_size,serving_quantity';
 
-    const apiRes  = await fetch(apiUrl, { signal: AbortSignal.timeout(8000) });
+    const apiRes  = await fetch(apiUrl, { signal: AbortSignal.timeout(5000) });
     const apiData = await apiRes.json();
 
     const items = (apiData.products || [])

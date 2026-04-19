@@ -1056,11 +1056,19 @@ function showQtyPicker(food) {
   viewQty.style.display    = 'flex';
 }
 
+// ── Qty stepper constants ─────────────────────
+const QTY_GRAMS_STEP    = 10;
+const QTY_GRAMS_MIN     = 5;
+const QTY_GRAMS_MAX     = 2000;
+const QTY_SERVING_STEP  = 0.5;
+const QTY_SERVING_MIN   = 0.5;
+const QTY_SERVING_MAX   = 10;
+
 // ── Qty stepper events ───────────────────────
 qtyMinusBtn.addEventListener('click', () => {
   const isGrams = selectedFood?.type === 'per100g';
-  const step = isGrams ? 10 : 0.5;
-  const min  = isGrams ? 5  : 0.5;
+  const step = isGrams ? QTY_GRAMS_STEP   : QTY_SERVING_STEP;
+  const min  = isGrams ? QTY_GRAMS_MIN    : QTY_SERVING_MIN;
   const val  = Math.max(min, parseFloat(qtyInputEl.value) - step);
   qtyInputEl.value = isGrams ? Math.round(val) : Math.round(val * 10) / 10;
   updateQtyMacros();
@@ -1068,8 +1076,8 @@ qtyMinusBtn.addEventListener('click', () => {
 
 qtyPlusBtn.addEventListener('click', () => {
   const isGrams = selectedFood?.type === 'per100g';
-  const step = isGrams ? 10 : 0.5;
-  const max  = isGrams ? 2000 : 10;
+  const step = isGrams ? QTY_GRAMS_STEP   : QTY_SERVING_STEP;
+  const max  = isGrams ? QTY_GRAMS_MAX    : QTY_SERVING_MAX;
   const val  = Math.min(max, parseFloat(qtyInputEl.value) + step);
   qtyInputEl.value = isGrams ? Math.round(val) : Math.round(val * 10) / 10;
   updateQtyMacros();
@@ -1221,13 +1229,25 @@ function renderMenu(filter = '') {
       appendLocalItems(query);
 
       if (menuListEl.children.length === 0) {
-        menuListEl.innerHTML = `<div class="empty-state"><div class="empty-emoji">🔍</div><p>No results for "<strong>${query}</strong>"</p></div>`;
+        const msg = document.createElement('div');
+        msg.className = 'empty-state';
+        msg.innerHTML = '<div class="empty-emoji">🔍</div>';
+        const p = document.createElement('p');
+        p.textContent = `No results for "${query}"`;
+        msg.appendChild(p);
+        menuListEl.appendChild(msg);
       }
     } catch {
       // API unavailable — fall back to local only
       appendLocalItems(query);
       if (menuListEl.children.length === 0) {
-        menuListEl.innerHTML = `<div class="empty-state"><div class="empty-emoji">🔍</div><p>No results for "<strong>${query}</strong>"</p></div>`;
+        const msg = document.createElement('div');
+        msg.className = 'empty-state';
+        msg.innerHTML = '<div class="empty-emoji">🔍</div>';
+        const p = document.createElement('p');
+        p.textContent = `No results for "${query}"`;
+        msg.appendChild(p);
+        menuListEl.appendChild(msg);
       }
     }
   }, 500);
