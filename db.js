@@ -36,31 +36,36 @@ db.exec(`
   -- Index so fetching "today" is fast
   CREATE INDEX IF NOT EXISTS idx_meal_logs_date ON meal_logs(date);
 `);
-// Add to db.js after the meal_logs table definition
+// Users and admin-log tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     username   TEXT    NOT NULL UNIQUE,
     email      TEXT    NOT NULL UNIQUE,
     password   TEXT    NOT NULL,
-    role       TEXT    NOT NULL DEFAULT 'user',  -- 'user' or 'admin'
+    role       TEXT    NOT NULL DEFAULT 'user',
     created_at TEXT    NOT NULL,
-    is_active  INTEGER DEFAULT 1
+    is_active  INTEGER NOT NULL DEFAULT 1
   );
 
   CREATE TABLE IF NOT EXISTS admin_logs (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    admin_id   INTEGER NOT NULL,
-    action     TEXT    NOT NULL,
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id       INTEGER NOT NULL,
+    action         TEXT    NOT NULL,
     target_user_id INTEGER,
-    details    TEXT,
-    timestamp  TEXT    NOT NULL,
+    details        TEXT,
+    timestamp      TEXT    NOT NULL,
     FOREIGN KEY(admin_id) REFERENCES users(id)
   );
-
-  -- Update meal_logs to include user_id
-  ALTER TABLE meal_logs ADD COLUMN user_id INTEGER DEFAULT 1;
 `);
+
+// Add user_id column to meal_logs if it doesn't exist yet
+const hasUserIdCol = db.prepare(
+  `SELECT COUNT(*) AS cnt FROM pragma_table_info('meal_logs') WHERE name = 'user_id'`
+).get();
+if (hasUserIdCol.cnt === 0) {
+  db.exec(`ALTER TABLE meal_logs ADD COLUMN user_id INTEGER DEFAULT 1`);
+}
 
 // ── Queries ─────────────────────────────────
 
@@ -114,4 +119,31 @@ function getRecentDates(limit = 7) {
   `).all(limit).map(r => r.date);
 }
 
-module.exports = { getMealsByDate, insertMeal, deleteMeal, getDailySummary, getRecentDates };
+// ── User helpers ────────────────────────────
+
+/** Create a new user, return the inserted row */
+function createUser({ username, email, password, role = 'user' }) {
+  const stmt = db.prepare(`
+    INSERT INTO users (username, email, password, role, created_at)
+    VALUES (@username, @email, @password, @role, @created_at)
+  `);
+  const info = stmt.run({ username, email, password, role, created_at: new Date().toISOString() });
+  return db.prepare('SELECT id, username, email, role, created_at, is_active FROM users WHERE id = ?').get(info.lastInsertRowid);
+}
+
+/** Find a user row (including password hash) by username */
+function findUserByUsername(username) {
+  return db.prepare('SELECT * FROM users WHERE username = ? AND is_active = 1').get(username);
+}
+
+/** Return all users (no password field) */
+function getAllUsers() {
+  return db.prepare('SELECT id, username, email, role, created_at, is_active FROM users ORDER BY id ASC').all();
+}
+
+/** Set is_active = 0 for a user, return changes count */
+function deactivateUser(id) {
+  return db.prepare('UPDATE users SET is_active = 0 WHERE id = ?').run(id).changes;
+}
+
+module.exports = { getMealsByDate, insertMeal, deleteMeal, getDailySummary, getRecentDates, createUser, findUserByUsername, getAllUsers, deactivateUser };
